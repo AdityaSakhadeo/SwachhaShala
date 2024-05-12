@@ -119,7 +119,7 @@ const ImageUploader = ({ navigation }) => {
             setIsLoading(false);
             return;
         }
-
+    
         try {
             const response = await fetch(image);
             const blob = await response.blob();
@@ -128,6 +128,24 @@ const ImageUploader = ({ navigation }) => {
             const fileName = `${schoolName}_${selectedOption}.jpg`;
             const fileRef = storageRef.child(fileName);
             await fileRef.put(blob);
+    
+            // Get the download URL of the uploaded image
+            const downloadURL = await fileRef.getDownloadURL();
+    
+            // Get user's location
+            const latlong = await getLatLong();
+            const location = `${latlong.latitude},${latlong.longitude}`;
+    
+            // Add data to the Firebase database
+            const databaseRef = firebase.firestore().collection('your_collection_name');
+            await databaseRef.add({
+                imageName: fileName,
+                schoolName: schoolName,
+                location: location,
+                imageLabel: selectedOption,
+                imageURL: downloadURL // Store download URL of the image
+            });
+    
             setIsLoading(false);
             Alert.alert('Image Uploaded Successfully', 'Thank you for your contribution!');
             navigation.goBack();
@@ -136,6 +154,7 @@ const ImageUploader = ({ navigation }) => {
             Alert.alert('Error', 'Failed to upload image');
         }
     };
+    
 
 
 
@@ -156,6 +175,7 @@ const ImageUploader = ({ navigation }) => {
                     placeholder="Enter School Name"
                     onChangeText={(text) => setSchoolName(text)}
                     value={schoolName}
+                    placeholderTextColor={'yellow'}
                 />
                 {image && (
                     <Image
