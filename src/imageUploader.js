@@ -16,6 +16,7 @@ const ImageUploader = ({ navigation }) => {
     const [image, setImage] = useState(null);
     const [selectedOption, setSelectedOption] = useState('clean');
     const [isLoading, setIsLoading] = useState(false);
+    const [userLocation,setUserLocation] = useState('');
 
 
 
@@ -60,23 +61,20 @@ const ImageUploader = ({ navigation }) => {
 
     useEffect(() => {
         const fetchLocation = async () => {
-            let permissionResult = checkOrRequestPermissionForLocation().then((res)=>{console.log(res)});
-            if (permissionResult) {
             try {
-                // Fetch user's location
                 const latlong = await getLatLong();
-                console.log("Lat long", latlong.latitude);
+                // console.log("Lat long", latlong.latitude);
                 const location = await getUserPosition(String(latlong.latitude), String(latlong.longitude));
-                console.log("Location",location)
-
+                let address = String(location.results[0].formatted_address);
+                setUserLocation(address);
+                Alert.alert("Location",address);
             } catch (error) {
                 console.error('Error fetching user location:', error);
-                // Handle error if needed
             }
         };
         fetchLocation();
                 }
-    }, []);
+    , []);
 
     const handleChoosePhoto = async () => {
         // await requestCameraPermission();
@@ -113,7 +111,6 @@ const ImageUploader = ({ navigation }) => {
     };
 
     const handleUploadImage = async () => {
-        setIsLoading(true);
         if (!schoolName) {
             Alert.alert('Alert', 'Please Enter School Name');
             setIsLoading(false);
@@ -121,39 +118,50 @@ const ImageUploader = ({ navigation }) => {
         }
     
         try {
+            setIsLoading(true);
             const response = await fetch(image);
             const blob = await response.blob();
             const folder = selectedOption === 'clean' ? 'clean' : 'dirty';
-            const storageRef = firebase.storage().ref().child(folder);
             const fileName = `${schoolName}_${selectedOption}.jpg`;
+            
+            // Upload image to Firebase Storage
+            const storageRef = firebase.storage().ref().child(folder);
             const fileRef = storageRef.child(fileName);
             await fileRef.put(blob);
     
-            // Get the download URL of the uploaded image
+            // Get download URL of uploaded image
             const downloadURL = await fileRef.getDownloadURL();
+            // console.log("before firestoreref")
+            // // Get reference to the Firestore database
+            // console.log("Firestore ref")
+            // // Check if the 'imageDetails' collection exists
+            // const imageDetailsRef = firestore().collection('imageDetails').get();
+            // console.log("checking ::",imageDetailsRef);
+            // const doc = await imageDetailsRef.doc('dummyDoc').get();
     
-            // Get user's location
-            const latlong = await getLatLong();
-            const location = `${latlong.latitude},${latlong.longitude}`;
+            // if (!doc.exists) {
+            //     // If the collection doesn't exist, create it
+            //     console.log("Table does not exist")
+            //     await imageDetailsRef.doc('dummyDoc').set({});
+            // }
     
-            // Add data to the Firebase database
-            const databaseRef = firebase.firestore().collection('your_collection_name');
-            await databaseRef.add({
-                imageName: fileName,
-                schoolName: schoolName,
-                location: location,
-                imageLabel: selectedOption,
-                imageURL: downloadURL // Store download URL of the image
-            });
+            // // Upload data to Firestore
+            // await imageDetailsRef.add({
+            //     imageName: fileName,
+            //     schoolName: schoolName,
+            //     location: userLocation, // Replace with actual location string
+            //     label: selectedOption
+            // });
     
             setIsLoading(false);
-            Alert.alert('Image Uploaded Successfully', 'Thank you for your contribution!');
+            Alert.alert('Image and Data Uploaded Successfully', 'Thank you for your contribution!');
             navigation.goBack();
         } catch (error) {
             setIsLoading(false);
-            Alert.alert('Error', 'Failed to upload image');
+            Alert.alert('Error', 'Failed to upload image and data');
         }
     };
+    
     
 
 
@@ -171,7 +179,7 @@ const ImageUploader = ({ navigation }) => {
             <View style={{ alignItems: 'center', marginTop: windowHeight * 0.02 }}>
                 <Text style={{ color: 'yellow', fontSize: windowHeight * 0.025, fontWeight: 'bold' }}>Enter School Name:</Text>
                 <TextInput
-                    style={{ height: windowHeight * 0.05, width: windowWidth * 0.9, borderColor: 'gray', borderWidth: 1, marginBottom: windowHeight * 0.01, marginTop: windowHeight * 0.02, borderRadius: windowHeight * 0.04, color: 'white' }}
+                    style={{ height: windowHeight * 0.05, width: windowWidth * 0.9, borderColor: 'gray', borderWidth: 1, marginBottom: windowHeight * 0.01, marginTop: windowHeight * 0.02, borderRadius: windowHeight * 0.04, color: 'yellow' }}
                     placeholder="Enter School Name"
                     onChangeText={(text) => setSchoolName(text)}
                     value={schoolName}
